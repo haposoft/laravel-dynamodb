@@ -2,6 +2,7 @@
 
 namespace BaoPham\DynamoDb;
 
+use App\Services\CacheService;
 use BaoPham\DynamoDb\Concerns\HasParsers;
 use Closure;
 use Aws\DynamoDb\DynamoDbClient;
@@ -1125,5 +1126,67 @@ class DynamoDbQueryBuilder
         ];
 
         return $result;
+    }
+    
+    /**
+     * Increment a column's value by a given amount.
+     *
+     * @param  string $column
+     * @param  int $amount
+     * @param  array $extra
+     * @return int
+     */
+    public function increment($column, $amount = 1, array $extra = [])
+    {
+        if (!is_numeric($amount)) {
+            throw new InvalidArgumentException('Non-numeric value passed to increment method.');
+        }
+
+        $key = $this->getDynamoDbKey();
+
+        $query = [
+            'TableName' => $this->model->getTable(),
+            'Key' => $key,
+            'UpdateExpression' => 'ADD ' . $column . ' :num',
+            'ExpressionAttributeValues' => [
+                ':num' => ['N' => (string)$amount],
+            ],
+            'ReturnValues' => 'NONE',
+        ];
+
+        $result = $this->client->updateItem($query);
+        CacheService::setModelItem($this->model, $this->model->getAttributes());
+        $status = array_get($result->toArray(), '@metadata.statusCode');
+
+        return $status == 200;
+    }
+
+    /**
+     * Decrement a column's value by a given amount.
+     *
+     * @param  string $column
+     * @param  int $amount
+     * @param  array $extra
+     * @return int
+     */
+    public function decrement($column, $amount = 1, array $extra = [])
+    {
+        $key = $this->getDynamoDbKey();
+
+        $query = [
+            'TableName' => $this->model->getTable(),
+            'Key' => $key,
+            'UpdateExpression' => 'ADD ' . $column . ' :num',
+            'ExpressionAttributeValues' => [
+                ':num' => ['N' => (string)(-$amount)],
+            ],
+            'ReturnValues' => 'NONE',
+        ];
+
+        $result = $this->client->updateItem($query);
+        CacheService::setModelItem($this->model, $this->model->getAttributes());
+        $status = array_get($result->toArray(), '@metadata.statusCode');
+
+        return $status == 200;
     }
 }

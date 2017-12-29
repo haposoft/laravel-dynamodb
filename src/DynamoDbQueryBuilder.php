@@ -8,6 +8,7 @@ use Aws\DynamoDb\DynamoDbClient;
 use Illuminate\Contracts\Support\Arrayable;
 use \Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Scope;
+use Illuminate\Support\Collection;
 
 class DynamoDbQueryBuilder
 {
@@ -1005,5 +1006,43 @@ class DynamoDbQueryBuilder
         }
 
         return $this;
+    }
+
+    public function paginate($columns = [], $limit = 1, $lastEvaluatedKey = null)
+    {
+        $totalCount = $this->count();
+        $limitProcess = (int)$limit;
+
+        if ($lastEvaluatedKey) {
+            $lastEvaluatedKey = json_decode($lastEvaluatedKey, true);
+        }
+
+        $results = new Collection();
+
+        while ($limitProcess > 0 && $totalCount > 0) {
+            $limitProcess = ($totalCount < $limitProcess) ? -1 : $limitProcess;
+
+            $items = $this->getAll($columns, $limitProcess, false);
+
+            if ($count = $items->count()) {
+                $results = $results->merge($items);
+                $limitProcess = $limitProcess - $count;
+            }
+
+            $lastEvaluatedKey = $this->lastEvaluatedKey;
+            if (empty($lastEvaluatedKey)) {
+                break;
+            }
+        }
+
+        $result = [
+            'total' => $totalCount,
+            'limit' => $limit,
+            'totalPage' => ceil($totalCount / $limit),
+            'lastEvaluatedKey' => $lastEvaluatedKey ? json_encode($lastEvaluatedKey) : '',
+            'items' => $results,
+        ];
+
+        return $result;
     }
 }

@@ -1097,6 +1097,7 @@ class DynamoDbQueryBuilder
 
         if ($lastEvaluatedKey) {
             $lastEvaluatedKey = json_decode($lastEvaluatedKey, true);
+            $this->lastEvaluatedKey = $lastEvaluatedKey;
         }
 
         $results = new Collection();

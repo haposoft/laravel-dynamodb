@@ -62,6 +62,8 @@ class DynamoDbQueryBuilder
      * @var mixed
      */
     protected $lastEvaluatedKey;
+    
+    protected $orderBy;
 
     /**
      * Specified index name for the query.
@@ -570,6 +572,13 @@ class DynamoDbQueryBuilder
     {
         return $this->getAll($this->model->getKeyNames())->count();
     }
+    
+    public function orderBy($direction = 'DESC')
+    {
+        $this->orderBy = $direction;
+
+        return $this;
+    }
 
     protected function getAll(
         $columns = [],
@@ -596,6 +605,9 @@ class DynamoDbQueryBuilder
             if ($op === 'Scan') {
                 $res = $this->client->scan($query);
             } else {
+                if ($this->orderBy) {
+                    $query['ScanIndexForward'] = strtolower($this->orderBy) == 'desc' ? false : true;
+                }
                 $res = $this->client->query($query);
             }
 

@@ -1092,7 +1092,7 @@ class DynamoDbQueryBuilder
 
     public function paginate($columns = [], $limit = 1, $lastEvaluatedKey = null)
     {
-        $totalCount = $this->totalCount();
+        $totalCount = $this->count();
         $limitProcess = (int)$limit;
 
         if ($lastEvaluatedKey) {

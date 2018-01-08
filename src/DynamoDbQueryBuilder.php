@@ -1265,4 +1265,24 @@ class DynamoDbQueryBuilder
 
         return false;
     }
+      
+    /*
+     * |--------------------------------------------------------------
+     * | WRITE LOG QUERY
+     * |--------------------------------------------------------------
+     * | @author Ominext - vungpv93@gmail.com
+     * |--------------------------------------------------------------
+     */
+    public function writeLog($query = null)
+    {
+        if (config('app.debug')) {
+            Log::debug($query);
+            $date = date('Ymd');
+            $log = new Logger('Query');
+            $log->pushHandler(new StreamHandler(storage_path('logs/query_' . $date . '.log'), Logger::DEBUG));
+//            $textLog = isset($query['FilterExpression']) ? 'Table: ' . $query['TableName'] . '; Query: ' . $query['FilterExpression'] : 'Table: ' . $query['TableName'];
+//            $log->debug($textLog);
+            $log->debug(json_encode($query));
+        }
+    }
 }

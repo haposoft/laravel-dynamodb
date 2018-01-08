@@ -1036,14 +1036,10 @@ class DynamoDbQueryBuilder
 
     public function totalCount()
     {
-        $query = [
-            'TableName' => $this->model->getTable(),
-            'Select' => 'COUNT',
-            'ReturnConsumedCapacity' => 'TOTAL',
-        ];
-
-        $op = $this->addConditionInQuery($query);
-
+        $columns = [];
+        list($op, $query) = $this->toDynamoDbQuery($columns, -1);
+        $query['Select'] = 'COUNT';
+        $query['ReturnConsumedCapacity'] = 'TOTAL';
         if ($op == 'Scan') {
             $res = $this->client->scan($query);
         } else {
@@ -1057,57 +1053,9 @@ class DynamoDbQueryBuilder
         return 0;
     }
 
-    protected function addConditionInQuery(&$query)
-    {
-        $op = 'Scan';
-        // If the $where is not empty, we run getIterator.
-        if (!empty($this->where)) {
-            // Index key condition exists, then use Query instead of Scan.
-            // However, Query only supports a few conditions.
-            $where = $this->where;
-            if ($index = $this->conditionsContainIndexKey($this->indexName)) {
-                $op = 'Query';
-                $query['IndexName'] = $index['name'];
-                $keysInfo = $index['keysInfo'];
-                if ($this->checkValidQueryDynamoDbOperator($keysInfo, 'hash')) {
-                    $hashKeyConditions = array_get($this->where, $keysInfo['hash']);
-                    $hashKeyConditions = array_except($hashKeyConditions, 'ConditionalOperator');
-                    $query['KeyConditions'][$keysInfo['hash']] = $hashKeyConditions;
-                }
-
-                if ($this->checkValidQueryDynamoDbOperator($keysInfo, 'range')) {
-                    $rangeKeyConditions = array_get($this->where, $keysInfo['range']);
-                    $rangeKeyConditions = array_except($rangeKeyConditions, 'ConditionalOperator');
-                    $query['KeyConditions'][$keysInfo['range']] = $rangeKeyConditions;
-
-                    if ($this->orderBy) {
-                        $query['ScanIndexForward'] = strtolower($this->orderBy) == 'desc' ? false : true;
-                    }
-                }
-
-                $where = array_except($this->where, array_values($keysInfo));
-            }
-
-            $expressionAttributeValues = [];
-            $expressionAttributeNames = [];
-            $filterExpression = '';
-            $this->writeQuery($filterExpression, $expressionAttributeValues, $expressionAttributeNames, $where);
-            if ($filterExpression) {
-                $query['FilterExpression'] = $filterExpression;
-                $query['ExpressionAttributeNames'] = $expressionAttributeNames;
-            }
-
-            if ($expressionAttributeValues) {
-                $query['ExpressionAttributeValues'] = $expressionAttributeValues;
-            }
-        }
-
-        return $op;
-    }
-
     public function paginate($columns = [], $limit = 1, $lastEvaluatedKey = null)
     {
-        $totalCount = $this->count();
+        $totalCount = $this->totalCount();
         $limitProcess = (int)$limit;
 
         if ($lastEvaluatedKey) {

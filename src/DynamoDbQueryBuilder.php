@@ -1202,4 +1202,67 @@ class DynamoDbQueryBuilder
 
         return $status == 200;
     }
+    
+    public function withTrashed()
+    {
+        unset($this->where['deleted_at']);
+
+        return $this;
+    }
+
+    public function onlyTrashed()
+    {
+        $this->where('deleted_at', '>', 1);
+
+        return $this;
+    }
+
+    public function deleteAll()
+    {
+        if ($this->model->getSoftDelete()) {
+            $models = $this->get();
+            foreach ($models as $model) {
+                $model->delete();
+            }
+        } else {
+            $models = $this->get();
+            $keys = $models->pluck('id');
+            if ($this->model->hasCompositeKey()) {
+                $compositeKey = $this->model->getCompositeKey();
+                $keys = $models->pluck($compositeKey[0], $compositeKey[1]);
+            }
+
+            if ($models->count()) {
+                foreach ($keys->chunk(25) as $chunk) {
+                    $deleteRequests = [];
+                    foreach ($chunk as $rangeKey => $hashKey) {
+                        $key = isset($compositeKey) ? [
+                            $compositeKey[1] => $rangeKey,
+                            $compositeKey[0] => $hashKey
+                        ] : ['id' => $hashKey];
+                        $deleteRequests[] = [
+                            'DeleteRequest' => [
+                                'Key' => $this->model->marshalItem($key),
+                            ],
+                        ];
+                    }
+
+                    try {
+                        $this->client->batchWriteItem([
+                            'RequestItems' => [
+                                $this->model->getTable() => $deleteRequests,
+                            ],
+                        ]);
+                    } catch (DynamoDbException $e) {
+                        \Log::error($e);
+                    }
+                }
+
+                event(new DeleteAllEvent($this->model, $models));
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

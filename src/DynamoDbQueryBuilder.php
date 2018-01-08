@@ -10,6 +10,9 @@ use Illuminate\Contracts\Support\Arrayable;
 use \Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 
 class DynamoDbQueryBuilder
 {

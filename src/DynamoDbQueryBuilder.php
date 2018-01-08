@@ -284,6 +284,9 @@ class DynamoDbQueryBuilder
 
     public function whereInTrigger($column, $values)
     {
+        if (count($values) == 0) {
+            return $this->where('created_at', '<', 1);
+        }
         foreach ($values as $key => $value) {
             if ($key == 0) {
                 $this->where($column, $value);

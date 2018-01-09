@@ -290,13 +290,15 @@ class DynamoDbQueryBuilder
         if (count($values) == 0) {
             return $this->where('created_at', '<', 1);
         }
-        foreach ($values as $key => $value) {
-            if ($key == 0) {
-                $this->where($column, $value);
-            } else {
-                $this->orWhere($column, $value);
+        $this->where(function ($q) use ($column,$values){
+            foreach ($values as $key => $value) {
+                if ($key == 0) {
+                    $q->where($column, $value);
+                } else {
+                    $q->orWhere($column, $value);
+                }
             }
-        }
+        });
         return $this;
     }
 

@@ -560,6 +560,53 @@ class DynamoDbQueryBuilder
         return array_get($result->toArray(), '@metadata.statusCode') === 200;
     }
 
+    public function insert($values, $withId = true, $withTimestamp = true)
+    {
+        try {
+            $itemPutRequest = [];
+
+            $timestamp = $withTimestamp ? [
+                'created_at' => [
+                    'N' => (string)time(),
+                ],
+                'updated_at' => [
+                    'N' => (string)time(),
+                ],
+            ] : [];
+            foreach ($values as $val) {
+                $this->model->fill($val);
+
+                $id = $withId ? ['id' => ['S' => (string)uniqid()]] : [];
+
+                $item = array_merge(
+                    $id,
+                    $this->model->marshalItem($this->model->getAttributes()),
+                    $timestamp
+                );
+
+                $itemPutRequest[] = [
+                    'PutRequest' => [
+                        'Item' => $item,
+                    ],
+                ];
+            }
+
+            $insertedValues = [
+                'RequestItems' => [
+                    $this->model->getTable() => $itemPutRequest,
+                ],
+            ];
+
+            $this->client->batchWriteItem($insertedValues);
+
+            return true;
+        } catch (Exception $e) {
+            Log::info($e);
+
+            return false;
+        }
+    }
+
     public function save()
     {
         $result = $this->client->putItem([

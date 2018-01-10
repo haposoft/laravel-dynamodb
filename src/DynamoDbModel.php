@@ -185,6 +185,13 @@ abstract class DynamoDbModel extends Model
         }
     }
 
+    public static function insert(array $values, $withId = true, $withTimestamp = true)
+    {
+        $model = new static;
+
+        return $model->newQuery()->insert($values, $withId, $withTimestamp);
+    }
+
     public static function all($columns = [])
     {
         $instance = new static;

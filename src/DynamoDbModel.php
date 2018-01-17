@@ -63,6 +63,7 @@ abstract class DynamoDbModel extends Model
      */
     protected $dateFormat = DateTime::ATOM;
 
+    protected $softDelete = false;
 
     public function __construct(array $attributes = [])
     {
@@ -174,8 +175,13 @@ abstract class DynamoDbModel extends Model
             }
 
             $this->exists = false;
-
-            $success = $this->newQuery()->delete();
+            
+            if ($this->softDelete) {
+                $this->deleted_at = time();
+                $success = $this->save();
+            } else {
+                $success = $this->newQuery()->delete();
+            }
 
             if ($success) {
                 $this->fireModelEvent('deleted', false);
@@ -183,6 +189,54 @@ abstract class DynamoDbModel extends Model
 
             return $success;
         }
+    }
+
+    public function restore()
+    {
+        if (is_null($this->getKeyName())) {
+            throw new Exception('No primary key defined on model.');
+        }
+        if ($this->softDelete) {
+            if ($this->fireModelEvent('restoring') === false) {
+                return false;
+            }
+
+            $this->deleted_at = null;
+            $success = $this->save();
+
+            if ($success) {
+                $this->fireModelEvent('restored', false);
+            }
+
+            return $success;
+        }
+
+        return false;
+    }
+
+    public function forceDelete()
+    {
+        $success = false;
+        if (is_null($this->getKeyName())) {
+            throw new Exception('No primary key defined on model.');
+        }
+
+        if ($this->exists) {
+            if ($this->fireModelEvent('deleting') === false) {
+                return false;
+            }
+
+            $this->exists = false;
+            if ($this->softDelete) {
+                $success = $this->newQuery()->delete();
+            }
+
+            if ($success) {
+                $this->fireModelEvent('deleted', false);
+            }
+        }
+
+        return $success;
     }
 
     public static function insert(array $values, $withId = true, $withTimestamp = true)
@@ -206,6 +260,9 @@ abstract class DynamoDbModel extends Model
     {
         $builder = new DynamoDbQueryBuilder($this);
 
+        if ($this->softDelete) {
+            $builder->where('deleted_at', null);
+        }
         foreach ($this->getGlobalScopes() as $identifier => $scope) {
             $builder->withGlobalScope($identifier, $scope);
         }
@@ -360,5 +417,10 @@ abstract class DynamoDbModel extends Model
     {
         parent::__wakeup();
         $this->setupDynamoDb();
+    }
+    
+    public function getSoftDelete()
+    {
+        return $this->softDelete;
     }
 }

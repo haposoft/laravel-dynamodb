@@ -114,7 +114,7 @@ abstract class DynamoDbModel extends Model
         $this->attributeFilter = static::$dynamoDb->getAttributeFilter();
     }
 
-    public function save(array $options = [])
+    public function save(array $options = [],$delete = false)
     {
         $create = !$this->exists;
 
@@ -122,10 +122,8 @@ abstract class DynamoDbModel extends Model
             return false;
         }
 
-        if (!$this->getKey()) {
-            if ($this->fireModelEvent('creating') === false) {
-                return false;
-            }
+        if (!$delete && $create && $this->fireModelEvent('creating') === false) {
+            return false;
         }
 
         if (!$create && $this->fireModelEvent('updating') === false) {
@@ -180,7 +178,7 @@ abstract class DynamoDbModel extends Model
             
             if ($this->softDelete) {
                 $this->deleted_at = time();
-                $success = $this->save();
+                $success = $this->save([],true);
             } else {
                 $success = $this->newQuery()->delete();
             }
@@ -262,9 +260,14 @@ abstract class DynamoDbModel extends Model
     {
         $builder = new DynamoDbQueryBuilder($this);
 
+        $builder->setModel($this);
+
+        $builder->setClient($this->client);
+
         if ($this->softDelete) {
-            $builder->where('deleted_at', null);
+            $builder->where('deleted_at',null);
         }
+
         foreach ($this->getGlobalScopes() as $identifier => $scope) {
             $builder->withGlobalScope($identifier, $scope);
         }

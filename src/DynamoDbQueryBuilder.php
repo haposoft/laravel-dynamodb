@@ -1268,13 +1268,6 @@ class DynamoDbQueryBuilder
 
         return false;
     }
-    /**
-     * @return DynamoDbModel
-     */
-    public function getModel()
-    {
-        return $this->model;
-    }
 
     /**
      * @param DynamoDbModel $model
@@ -1282,14 +1275,6 @@ class DynamoDbQueryBuilder
     public function setModel($model)
     {
         $this->model = $model;
-    }
-
-    /**
-     * @return DynamoDbClient
-     */
-    public function getClient()
-    {
-        return $this->client;
     }
 
     /**

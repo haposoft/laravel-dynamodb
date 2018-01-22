@@ -13,6 +13,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
+use App\Events\DeleteAllEvent;
 
 class DynamoDbQueryBuilder
 {

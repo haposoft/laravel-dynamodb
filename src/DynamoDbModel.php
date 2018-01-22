@@ -329,6 +329,22 @@ abstract class DynamoDbModel extends Model
     }
 
     /**
+     * @return array
+     */
+    public function getCompositeKey()
+    {
+        return $this->compositeKey;
+    }
+
+    /**
+     * @param array $compositeKey
+     */
+    public function setCompositeKey($compositeKey)
+    {
+        $this->compositeKey = $compositeKey;
+    }
+
+    /**
      * Get the value of the model's primary / composite key.
      * Use this if you always want the key values in associative array form.
      *

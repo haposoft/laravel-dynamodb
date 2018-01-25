@@ -1209,8 +1209,11 @@ class DynamoDbQueryBuilder
     
     public function withTrashed()
     {
-        unset($this->where['deleted_at']);
-
+        foreach ($this->wheres as $key => $where) {
+            if ($where["column"] == "deleted_at") {
+                unset($this->wheres[$key]);
+            }
+        }
         return $this;
     }
 
